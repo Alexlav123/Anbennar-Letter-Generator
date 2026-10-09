@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11100e">
+  <title>Anbennar Letter Generator</title>
+  <link rel="stylesheet" href="css/styles.css?v=13">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Anbennar Letter Generator">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>Anbennar Letter Generator</h1>
+      </div>
+      <div class="top-actions" aria-label="Letter file actions">
+        <button class="button button-quiet" id="saveButton" type="button">Save letter</button>
+        <button class="button button-quiet" id="loadButton" type="button">Load letter</button>
+        <button class="button button-quiet" id="resetButton" type="button">Reset</button>
+        <input id="loadFile" type="file" accept="application/json,.json" hidden>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="preview-pane" aria-labelledby="previewHeading">
+        <div class="pane-heading">
+          <div>
+            <p class="section-label">Live document</p>
+            <h2 id="previewHeading">Preview</h2>
+          </div>
+          <div class="preview-status" id="previewStatus" aria-live="polite">Document ready</div>
+        </div>
+
+        <div class="preview-stage" id="previewStage">
+          <canvas id="letterCanvas" width="1055" height="1491" aria-label="Live preview of the diplomatic letter"></canvas>
+        </div>
+
+        <footer class="preview-footer">
+          <span>Native ratio 1055 × 1491</span>
+          <span>Export 1400 × <span id="exportHeight">1979</span> px</span>
+        </footer>
+      </section>
+
+      <aside class="editor-pane" aria-labelledby="editorHeading">
+        <div class="editor-heading">
+          <div>
+            <p class="section-label">Letter settings</p>
+            <h2 id="editorHeading">Compose</h2>
+          </div>
+          <span class="autosave-state" id="autosaveState">Saved locally</span>
+        </div>
+
+        <form id="letterForm" novalidate>
+          <fieldset>
+            <legend><span>01</span> Document</legend>
+            <div class="field-row two-columns">
+              <label class="field">
+                <span>Country / Sender</span>
+                <select id="country" name="country"></select>
+              </label>
+              <label class="field">
+                <span>Material</span>
+                <select id="surface" name="surface"></select>
+              </label>
+            </div>
+            <label class="field">
+              <span>Header</span>
+              <input id="header" name="header" type="text" maxlength="90" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>Recipient</span>
+              <input id="recipient" name="recipient" type="text" maxlength="180" autocomplete="off">
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend><span>02</span> Message</legend>
+            <label class="field">
+              <span>Body</span>
+              <textarea id="body" name="body" rows="9"></textarea>
+            </label>
+            <div class="fit-message" id="fitMessage" role="status" aria-live="polite">
+              <span class="fit-dot" aria-hidden="true"></span>
+              <span id="fitMessageText">Letter fits comfortably on one page.</span>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend><span>03</span> Signature</legend>
+            <label class="field">
+              <span>Closing</span>
+              <input id="closing" name="closing" type="text" maxlength="100" autocomplete="off">
+            </label>
+            <div class="field-row two-columns">
+              <label class="field">
+                <span>Signatory</span>
+                <input id="signatory" name="signatory" type="text" maxlength="100" autocomplete="off">
+              </label>
+              <label class="field">
+                <span>Title</span>
+                <input id="title" name="title" type="text" maxlength="140" autocomplete="off">
+              </label>
+            </div>
+            <div class="field-row date-row">
+              <div class="field date-field">
+                <span id="dateLabel">Date</span>
+                <button class="date-trigger" id="datePickerButton" type="button" aria-labelledby="dateLabel datePickerValue" aria-expanded="false">
+                  <span id="datePickerValue">11th of Nerament, 1444</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+                </button>
+                <div class="calendar-picker" id="calendarPicker" hidden>
+                  <div class="calendar-nav">
+                    <button class="calendar-arrow" id="previousMonth" type="button" aria-label="Previous month">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <div class="calendar-period">
+                      <label>
+                        <span class="sr-only">Anbennar month</span>
+                        <select id="calendarMonth" aria-label="Anbennar month"></select>
+                      </label>
+                      <label>
+                        <span class="sr-only">Campaign year</span>
+                        <input id="calendarYear" type="number" min="1" step="1" inputmode="numeric" aria-label="Campaign year">
+                      </label>
+                    </div>
+                    <button class="calendar-arrow" id="nextMonth" type="button" aria-label="Next month">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div class="calendar-weekdays" aria-hidden="true">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                  </div>
+                  <div class="calendar-days" id="calendarDays" role="grid" aria-label="Days of the selected Anbennar month"></div>
+                </div>
+              </div>
+            </div>
+            <label class="field">
+              <span>Seal style</span>
+              <select id="sealStyle" name="sealStyle"></select>
+            </label>
+            <div class="toggle-row">
+              <button class="switch-field" id="showDate" name="showDate" type="button" role="switch" aria-checked="true">
+                <span class="switch" aria-hidden="true"></span>
+                <span>Show date</span>
+              </button>
+              <button class="switch-field" id="showSeal" name="showSeal" type="button" role="switch" aria-checked="true">
+                <span class="switch" aria-hidden="true"></span>
+                <span>Show seal</span>
+              </button>
+              <button class="switch-field" id="showCrest" name="showCrest" type="button" role="switch" aria-checked="true">
+                <span class="switch" aria-hidden="true"></span>
+                <span>Show crest</span>
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend><span>04</span> Crest</legend>
+            <div class="upload-row">
+              <div>
+                <span class="upload-title">Custom crest</span>
+                <span class="upload-help">PNG, JPEG or WebP. Stored only on this device.</span>
+              </div>
+              <label class="button button-file" for="crestUpload">Choose image</label>
+              <input id="crestUpload" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </div>
+            <div class="crest-status-row">
+              <p class="file-name" id="crestFileName">No custom crest selected</p>
+              <button class="button button-text" id="clearCrestButton" type="button" disabled>Restore default crest</button>
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="export-area">
+          <button class="button button-export" id="exportButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0-12 4 4m-4-4L8 7M5 13v7h14v-7"/></svg>
+            Export PNG
+          </button>
+          <p>High-resolution document only. No editor chrome.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="resetDialog">
+    <form method="dialog">
+      <p class="section-label">Restore defaults</p>
+      <h2>Reset this letter?</h2>
+      <p>Your current text and settings will be replaced with the demo letter.</p>
+      <div class="dialog-actions">
+        <button class="button button-quiet" value="cancel">Keep editing</button>
+        <button class="button button-danger" value="confirm">Reset letter</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    window.AnbennarAssetRuntime = Object.freeze({
+      version: `dev-${Date.now().toString(36)}`,
+      preferPhysical: true
+    });
+  </script>
+  <script src="js/embedded-assets.js?v=13"></script>
+  <script src="js/presets.js?v=13"></script>
+  <script src="js/calendar.js?v=13"></script>
+  <script src="js/renderer.js?v=13"></script>
+  <script src="js/storage.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
+</body>
+</html>
