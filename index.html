@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#11100e">
+  <link rel="icon" href="data:,">
   <title>Anbennar Letter Generator</title>
-  <link rel="stylesheet" href="css/styles.css?v=13">
+  <link rel="stylesheet" href="css/styles.css?v=18">
 </head>
 <body>
   <div class="app-shell">
@@ -15,6 +16,9 @@
         <h1>Anbennar Letter Generator</h1>
       </div>
       <div class="top-actions" aria-label="Letter file actions">
+        <button class="button button-quiet" id="newDocumentButton" type="button">New document</button>
+        <button class="button button-quiet" id="myDocumentsButton" type="button">My documents</button>
+        <button class="button button-quiet" id="saveLibraryButton" type="button">Save draft</button>
         <button class="button button-quiet" id="saveButton" type="button">Save letter</button>
         <button class="button button-quiet" id="loadButton" type="button">Load letter</button>
         <button class="button button-quiet" id="resetButton" type="button">Reset</button>
@@ -36,6 +40,12 @@
           <canvas id="letterCanvas" width="1055" height="1491" aria-label="Live preview of the diplomatic letter"></canvas>
         </div>
 
+        <nav class="page-navigation" id="pageNavigation" aria-label="Preview pages" hidden>
+          <button class="button button-quiet" id="previousPageButton" type="button">Previous</button>
+          <span id="pageIndicator">Page 1 of 1</span>
+          <button class="button button-quiet" id="nextPageButton" type="button">Next</button>
+        </nav>
+
         <footer class="preview-footer">
           <span>Native ratio 1055 × 1491</span>
           <span>Export 1400 × <span id="exportHeight">1979</span> px</span>
@@ -56,29 +66,67 @@
             <legend><span>01</span> Document</legend>
             <div class="field-row two-columns">
               <label class="field">
-                <span>Country / Sender</span>
-                <select id="country" name="country"></select>
+                <span>Format</span>
+                <select id="format" name="format"></select>
               </label>
+              <label class="field">
+                <span>Template</span>
+                <select id="template" name="template"></select>
+              </label>
+            </div>
+            <div class="field-row two-columns">
+              <div class="field combobox-field">
+                <span id="countryLabel">Country / Sender</span>
+                <input id="countrySearch" type="text" role="combobox" aria-labelledby="countryLabel" aria-controls="countryResults" aria-expanded="false" aria-autocomplete="list" autocomplete="off">
+                <input id="country" name="country" type="hidden">
+                <div class="combobox-results" id="countryResults" role="listbox" hidden></div>
+              </div>
               <label class="field">
                 <span>Material</span>
                 <select id="surface" name="surface"></select>
               </label>
             </div>
-            <label class="field">
-              <span>Header</span>
+            <label class="field" id="issuingAuthorityField" hidden>
+              <span>Issuing authority</span>
+              <input id="issuingAuthority" name="issuingAuthority" type="text" maxlength="180" autocomplete="off">
+            </label>
+            <label class="field" id="headerField">
+              <span id="headerLabel">Header</span>
               <input id="header" name="header" type="text" maxlength="90" autocomplete="off">
             </label>
-            <label class="field">
+            <label class="field" id="subtitleField" hidden>
+              <span>Subtitle</span>
+              <input id="subtitle" name="subtitle" type="text" maxlength="160" autocomplete="off">
+            </label>
+            <label class="field" id="recipientField">
               <span>Recipient</span>
               <input id="recipient" name="recipient" type="text" maxlength="180" autocomplete="off">
+            </label>
+            <label class="field" id="partiesField" hidden>
+              <span>Parties</span>
+              <input id="parties" name="parties" type="text" maxlength="220" autocomplete="off">
+            </label>
+            <label class="field" id="preambleField" hidden>
+              <span>Preamble</span>
+              <textarea id="preamble" name="preamble" rows="3"></textarea>
             </label>
           </fieldset>
 
           <fieldset>
             <legend><span>02</span> Message</legend>
-            <label class="field">
-              <span>Body</span>
+            <div class="field body-editor-field">
+              <div class="body-editor-heading">
+                <label id="bodyLabel" for="body">Body</label>
+                <div class="formatting-toolbar" role="toolbar" aria-label="Body formatting">
+                  <button class="formatting-button formatting-button-bold" id="bodyBoldButton" type="button" aria-label="Bold" aria-pressed="false" title="Bold (Ctrl+B)">B</button>
+                  <button class="formatting-button formatting-button-italic" id="bodyItalicButton" type="button" aria-label="Italic" aria-pressed="false" title="Italic (Ctrl+I)">I</button>
+                </div>
+              </div>
               <textarea id="body" name="body" rows="9"></textarea>
+            </div>
+            <label class="field" id="deadlineField" hidden>
+              <span>Deadline</span>
+              <input id="deadline" name="deadline" type="text" maxlength="160" autocomplete="off">
             </label>
             <div class="fit-message" id="fitMessage" role="status" aria-live="polite">
               <span class="fit-dot" aria-hidden="true"></span>
@@ -88,11 +136,11 @@
 
           <fieldset>
             <legend><span>03</span> Signature</legend>
-            <label class="field">
+            <label class="field" id="closingField">
               <span>Closing</span>
               <input id="closing" name="closing" type="text" maxlength="100" autocomplete="off">
             </label>
-            <div class="field-row two-columns">
+            <div class="field-row two-columns" id="singleSignatureFields">
               <label class="field">
                 <span>Signatory</span>
                 <input id="signatory" name="signatory" type="text" maxlength="100" autocomplete="off">
@@ -101,6 +149,34 @@
                 <span>Title</span>
                 <input id="title" name="title" type="text" maxlength="140" autocomplete="off">
               </label>
+            </div>
+            <div id="treatySignatures" hidden>
+              <div class="field-row two-columns">
+                <label class="field"><span>Party A</span><input id="partyA" name="partyA" type="text"></label>
+                <label class="field"><span>Party B</span><input id="partyB" name="partyB" type="text"></label>
+              </div>
+              <div class="field-row two-columns">
+                <label class="field"><span>Representative A</span><input id="representativeA" name="representativeA" type="text"></label>
+                <label class="field"><span>Representative B</span><input id="representativeB" name="representativeB" type="text"></label>
+              </div>
+              <div class="field-row two-columns">
+                <label class="field"><span>Title A</span><input id="representativeTitleA" name="representativeTitleA" type="text"></label>
+                <label class="field"><span>Title B</span><input id="representativeTitleB" name="representativeTitleB" type="text"></label>
+              </div>
+              <div class="field-row two-columns">
+                <label class="field"><span>Seal A category</span><select id="sealCategoryA" name="sealCategoryA"></select></label>
+                <label class="field"><span>Seal B category</span><select id="sealCategoryB" name="sealCategoryB"></select></label>
+              </div>
+              <div class="field-row two-columns">
+                <label class="field"><span>Seal A design</span><select id="sealDesignA" name="sealDesignA"></select></label>
+                <label class="field"><span>Seal B design</span><select id="sealDesignB" name="sealDesignB"></select></label>
+              </div>
+              <div class="custom-seal-actions" id="treatyCustomSealActions" hidden>
+                <button class="button button-text" id="addCustomSealAButton" type="button">Add custom seal for A</button>
+                <button class="button button-text" id="addCustomSealBButton" type="button">Add custom seal for B</button>
+                <button class="button button-text" id="manageTreatyCustomSealsButton" type="button">Manage custom seals</button>
+                <p class="custom-seal-state" id="treatyCustomSealStatus" aria-live="polite"></p>
+              </div>
             </div>
             <div class="field-row date-row">
               <div class="field date-field">
@@ -135,10 +211,15 @@
                 </div>
               </div>
             </div>
-            <label class="field">
-              <span>Seal style</span>
-              <select id="sealStyle" name="sealStyle"></select>
-            </label>
+            <div class="field-row two-columns" id="sealSelectionField">
+              <label class="field"><span>Seal category</span><select id="sealCategory" name="sealCategory"></select></label>
+              <label class="field"><span>Seal design</span><select id="sealDesign" name="sealDesign"></select></label>
+            </div>
+            <div class="custom-seal-actions" id="singleCustomSealActions" hidden>
+              <button class="button button-text" id="addCustomSealButton" type="button">Add custom seal</button>
+              <button class="button button-text" id="manageCustomSealsButton" type="button">Manage custom seals</button>
+              <p class="custom-seal-state" id="singleCustomSealStatus" aria-live="polite"></p>
+            </div>
             <div class="toggle-row">
               <button class="switch-field" id="showDate" name="showDate" type="button" role="switch" aria-checked="true">
                 <span class="switch" aria-hidden="true"></span>
@@ -151,6 +232,10 @@
               <button class="switch-field" id="showCrest" name="showCrest" type="button" role="switch" aria-checked="true">
                 <span class="switch" aria-hidden="true"></span>
                 <span>Show crest</span>
+              </button>
+              <button class="switch-field" id="showPageNumbers" name="showPageNumbers" type="button" role="switch" aria-checked="true">
+                <span class="switch" aria-hidden="true"></span>
+                <span>Page numbers</span>
               </button>
             </div>
           </fieldset>
@@ -170,6 +255,22 @@
               <button class="button button-text" id="clearCrestButton" type="button" disabled>Restore default crest</button>
             </div>
           </fieldset>
+          <fieldset>
+            <details class="advanced-panel" id="advancedPositioning">
+              <summary>Advanced positioning</summary>
+              <div class="advanced-grid">
+                <h3>Crest</h3>
+                <label class="field"><span>Scale</span><input id="crestScale" type="range" min="0.5" max="1.5" step="0.01"></label>
+                <label class="field"><span>X offset</span><input id="crestX" type="range" min="-160" max="160" step="1"></label>
+                <label class="field"><span>Y offset</span><input id="crestY" type="range" min="-160" max="160" step="1"></label>
+                <h3>Seal</h3>
+                <label class="field"><span>Scale</span><input id="sealScale" type="range" min="0.5" max="1.5" step="0.01"></label>
+                <label class="field"><span>X offset</span><input id="sealX" type="range" min="-180" max="180" step="1"></label>
+                <label class="field"><span>Y offset</span><input id="sealY" type="range" min="-180" max="180" step="1"></label>
+                <button class="button button-quiet" id="resetPositioningButton" type="button">Reset positioning</button>
+              </div>
+            </details>
+          </fieldset>
         </form>
 
         <div class="export-area">
@@ -177,6 +278,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0-12 4 4m-4-4L8 7M5 13v7h14v-7"/></svg>
             Export PNG
           </button>
+          <button class="button button-quiet export-all" id="exportAllButton" type="button" hidden>Export all pages</button>
           <p>High-resolution document only. No editor chrome.</p>
         </div>
       </aside>
@@ -195,17 +297,74 @@
     </form>
   </dialog>
 
+  <dialog id="libraryDialog" class="library-dialog">
+    <div class="dialog-panel">
+      <div class="library-heading">
+        <div>
+          <p class="section-label">Local drafts</p>
+          <h2>My Documents</h2>
+        </div>
+        <div class="library-heading-actions">
+          <button class="button button-quiet" id="saveAsLibraryButton" type="button">Save As</button>
+          <button class="button button-quiet" id="duplicateCurrentButton" type="button">Duplicate Current</button>
+        </div>
+      </div>
+      <div id="libraryList" class="library-list"></div>
+      <div class="dialog-actions"><button class="button button-quiet" id="closeLibraryButton" type="button">Close</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="customSealEditorDialog" class="custom-seal-editor-dialog">
+    <form id="customSealEditorForm" novalidate>
+      <p class="section-label">Reusable artwork</p>
+      <h2>Add custom seal</h2>
+      <label class="field">
+        <span>Name</span>
+        <input id="customSealName" type="text" maxlength="120" autocomplete="off" required>
+      </label>
+      <label class="field">
+        <span>Image</span>
+        <input id="customSealImage" type="file" accept="image/png,image/jpeg,image/webp" required>
+      </label>
+      <p class="custom-seal-state" id="customSealEditorStatus" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancelCustomSealButton" type="button">Cancel</button>
+        <button class="button" id="saveCustomSealButton" type="submit">Save Seal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="customSealManagerDialog" class="library-dialog custom-seal-manager-dialog">
+    <div class="dialog-panel">
+      <div class="library-heading">
+        <div>
+          <p class="section-label">Local artwork</p>
+          <h2>Custom Seals</h2>
+        </div>
+        <button class="button button-quiet" id="managerAddCustomSealButton" type="button">+ Add custom seal</button>
+      </div>
+      <p class="custom-seal-state" id="customSealManagerStatus" role="status" aria-live="polite"></p>
+      <div id="customSealManagerList" class="library-list custom-seal-list"></div>
+      <div class="dialog-actions"><button class="button button-quiet" id="closeCustomSealManagerButton" type="button">Close</button></div>
+      <input id="replaceCustomSealImage" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+    </div>
+  </dialog>
+
   <script>
     window.AnbennarAssetRuntime = Object.freeze({
       version: `dev-${Date.now().toString(36)}`,
       preferPhysical: true
     });
+    if (location.protocol === "file:") {
+      document.write(`<script src="js/offline-export-assets.js?v=${encodeURIComponent(window.AnbennarAssetRuntime.version)}"><\/script>`);
+    }
   </script>
-  <script src="js/embedded-assets.js?v=13"></script>
-  <script src="js/presets.js?v=13"></script>
-  <script src="js/calendar.js?v=13"></script>
-  <script src="js/renderer.js?v=13"></script>
-  <script src="js/storage.js?v=13"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/formats.js?v=20"></script>
+  <script src="js/presets.js?v=19"></script>
+  <script src="js/custom-seals.js?v=1"></script>
+  <script src="js/calendar.js?v=15"></script>
+  <script src="js/renderer.js?v=28"></script>
+  <script src="js/storage.js?v=19"></script>
+  <script src="js/app.js?v=21"></script>
 </body>
 </html>
