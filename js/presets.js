@@ -48,15 +48,38 @@
     })
   });
 
-  const SEALS = Object.freeze({
-    monarchy: Object.freeze({ label: "Monarchical Wax", path: "assets/seals/monarchy.png", scale: 1 }),
-    republic: Object.freeze({ label: "Republican Seal", path: "assets/seals/republic.png", scale: 1 }),
-    tribal: Object.freeze({ label: "Tribal Mark", path: "assets/seals/tribal.png", scale: 1 }),
-    runic: Object.freeze({ label: "Dwarven Runes", path: "assets/seals/runic.png", scale: 1 }),
-    lotus: Object.freeze({ label: "Lotus Seal", path: "assets/seals/lotus.png", scale: 1 }),
-    bulwar: Object.freeze({ label: "Bulwari Seal", path: "assets/seals/bulwar.png", scale: 1 }),
-    magocracy: Object.freeze({ label: "Magocratic Sigil", path: "assets/seals/magocracy.png", scale: 1 })
+  function sealCategory(label, designCount, options = {}) {
+    return Object.freeze({
+      label,
+      designs: Object.freeze(Array.from({ length: designCount }, (_, index) => String(index + 1))),
+      scale: 1,
+      ...options
+    });
+  }
+
+  const SEAL_CATEGORIES = Object.freeze({
+    bulwari: sealCategory("Bulwari", 3),
+    magocracy: sealCategory("Magocracy", 3),
+    monarchy: sealCategory("Monarchy", 3),
+    republic: sealCategory("Republic", 4),
+    runic: sealCategory("Runic", 3),
+    sarhal: sealCategory("Sarhal", 3),
+    tribal: sealCategory("Tribal", 3),
+    custom: Object.freeze({ label: "Custom", dynamic: true, scale: 1 })
   });
+
+  function resolveSeal(category, design) {
+    const definition = SEAL_CATEGORIES[category];
+    if (!definition || definition.dynamic) return null;
+    const resolvedDesign = definition.designs.includes(String(design)) ? String(design) : definition.designs[0];
+    return Object.freeze({
+      category,
+      design: resolvedDesign,
+      label: `${definition.label} · Design ${resolvedDesign}`,
+      path: `assets/seals/${category}/${resolvedDesign}.png`,
+      scale: definition.scale || 1
+    });
+  }
 
   function country(id, label, filename, options = {}) {
     return Object.freeze({
@@ -75,8 +98,8 @@
   }
 
   const COUNTRIES = Object.freeze({
-    counts_league: country("counts_league", "Counts League", "counts_league.png", { defaultRulerTitle: "Count of the League" }),
-    marhold: country("marhold", "Marhold", "marhold.png", { accent: "#8b6924", defaultRulerTitle: "Lord of Marhold" }),
+    counts_league: country("counts_league", "Counts League", "counts_league.png", { aliases: ["Count's League", "Counts' League", "Castellyr"], defaultRulerTitle: "Count of the League" }),
+    marhold: country("marhold", "Marhold", "marhold.png", { aliases: ["Marrhold"], accent: "#8b6924", defaultRulerTitle: "Lord of Marhold" }),
     adshaw: country("adshaw", "Adshaw", "adshaw.png"),
     asarta: country("asarta", "Asarta", "asarta.png"),
     asra_expedition: country("asra_expedition", "Asra Expedition", "asra_expedition.png"),
@@ -118,27 +141,50 @@
   });
 
   window.AnbennarConfig = Object.freeze({
-    assets: Object.freeze({ seal: "assets/seals/monarchy.png" }),
-    seals: SEALS,
+    assets: Object.freeze({ seal: "assets/seals/monarchy/1.png" }),
+    sealCategories: SEAL_CATEGORIES,
+    resolveSeal,
     surfaces: SURFACES,
     countries: COUNTRIES,
     defaultState: Object.freeze({
-      version: 4,
+      version: 8,
+      format: "letter",
+      template: "",
       country: "counts_league",
       surface: "parchment",
+      issuingAuthority: "",
       header: "Formal Correspondence",
+      subtitle: "",
       recipient: "To the Lord of Marhold,",
+      parties: "",
+      preamble: "",
       body: "Word has reached our court of recent developments along the frontier.\n\nIt is our hope that the interests of our realms may yet be settled through cordial negotiation rather than needless dispute. We therefore invite your representatives to meet with ours and establish terms acceptable to both parties.",
+      deadline: "",
       closing: "By my hand,",
       signatory: "Aldren III",
       title: "Count of the League",
+      partyA: "Count's League",
+      representativeA: "Aldren III",
+      representativeTitleA: "Count of the League",
+      partyB: "",
+      representativeB: "",
+      representativeTitleB: "",
       date: Object.freeze({ day: 11, month: 10, year: 1444 }),
-      sealStyle: "monarchy",
-      showDate: false,
+      sealCategory: "monarchy",
+      sealDesign: "1",
+      sealCategoryA: "monarchy",
+      sealDesignA: "1",
+      sealCategoryB: "",
+      sealDesignB: "1",
+      showDate: true,
       showCrest: true,
       showSeal: true,
+      showPageNumbers: true,
       customCrest: null,
-      customCrestName: ""
+      customCrestName: "",
+      positioning: Object.freeze({ crestScale: 1, crestX: 0, crestY: 0, sealScale: 1, sealX: 0, sealY: 0 }),
+      currentPage: 0,
+      libraryId: null
     })
   });
 })();
